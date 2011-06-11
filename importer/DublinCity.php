@@ -24,9 +24,9 @@ function create_app($row) {
 
 function get_decision_and_status($s) {
     if (!$s) return array('N', 1);
-    if (preg_match('/(grant|approved)/i', $s)) return array('C', 9);
+    if (preg_match('/non compliance|refuse/i', $s)) return array('R', 9);
+    if (preg_match('/grant|approved|compliance/i', $s)) return array('C', 9);
     if (preg_match('/invalid/i', $s)) return array('N', 0);
-    if (preg_match('/refuse/i', $s)) return array('R', 9);
     if (preg_match('/additional information/i', $s)) return array('N', 2);
     if (preg_match('/withdrawn/i', $s)) return array('N', 8);
     return array('D', 3);
