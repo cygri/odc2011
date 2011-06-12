@@ -69,6 +69,7 @@ class Planning {
                    IF(lat IS NOT NULL AND lng IS NOT NULL, 1, 0) AS coordinates,
                    council_id
             FROM applications
+            WHERE year(received_date) <= year(NOW())
             GROUP BY year(received_date), council_id, lat IS NOT NULL AND lng IS NOT NULL
 EOT;
         $yearly_data = $this->db->select_rows($query);
@@ -326,18 +327,18 @@ ORDER BY app_ref DESC";
         return sprintf("app_ref='%s' AND council_id=%d", $this->db->escape($app['app_ref']), $app['council_id']);
     }
 
-    function geocode_application(&$app, $force = false) {
+    function geocode_application(&$app, $existing_only, $force = false) {
         if ($force) {
             // Delete any existing location from the DB and ignore any location already on the app
             $this->db->execute("DELETE FROM geocoding WHERE " . $this->select_condition($app));
             $result = null;
         } else {
             // Check if the app alrady has a location, and check the DB
-            if ($app['lat'] || $app['lng']) return true;  // This one already has a location
+            if (@$app['lat'] || @$app['lng']) return true;  // This one already has a location
             $sql = sprintf("SELECT * FROM geocoding WHERE " . $this->select_condition($app));
             $result = $this->db->select_row($sql);
         }
-        if (!$result) {
+        if (!$result && !$existing_only) {
             require_once dirname(__FILE__) . '/geocoder.class.php';
             $result = Geocoder::geocode(str_replace("\n", ", ", $app['address']));
             $result['app_ref'] = $app['app_ref'];
@@ -356,17 +357,19 @@ ORDER BY app_ref DESC";
     function import_apps($apps, $geocode = false) {
         $report = array('added' => 0, 'skipped' => 0, 'updated' => 0, 'geocode_success' => 0, 'geocode_fail' => 0);
         foreach ($apps as $app) {
-            if ($this->application_exists($app)) {
-                $this->update_application($app);
-                $report['updated']++;
-                continue;
-            }
             if ($geocode) {
                 if ($this->geocode_application($app)) {
                     $report['geocode_success']++;
                 } else {
                     $report['geocode_fail']++;
                 }
+            } else {
+                $this->geocode_application($app, true);
+            }
+            if ($this->application_exists($app)) {
+                $this->update_application($app);
+                $report['updated']++;
+                continue;
             }
             $this->add_application($app);
             $report['added']++;

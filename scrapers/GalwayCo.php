@@ -60,7 +60,7 @@ function &get_applications($start_date, $end_date, $status = 'Received') {
         'date1' => "$d1[3]/$d1[2]/$d1[1]",
         'date2' => "$d2[3]/$d2[2]/$d2[1]",
     );
-    $html = http_get_post_response($url, $postvars);
+    $html = http_request($url, $postvars);
     $dom = str_get_html($html);
     $results = array();
     $rowcount = 0;

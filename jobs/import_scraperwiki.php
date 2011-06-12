@@ -6,7 +6,7 @@ include dirname(__FILE__) . '/../lib/planning.class.php';
 $db = new DB($config);
 $planning = new Planning($db);
 
-echo date("Y-m-d H:i:s")." # Importing Scraper Wiki\n";
+echo date("Y-m-d H:i:s")." # Importing from ScraperWiki\n";
 
 date_default_timezone_set('Eire');
 

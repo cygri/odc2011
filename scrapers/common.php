@@ -59,11 +59,12 @@ function write_csv(&$apps) {
     }
 }
 
-function http_get_post_response($url, $postvars=NULL) {
+function http_request($url, $postvars=NULL) {
     static $curl;
     if (empty($curl)) {
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_COOKIEFILE, '/dev/null');   // necessary to enable cookies
         curl_setopt($curl, CURLOPT_USERAGENT, 'Planning Explorer (http://planning-apps.opendata.ie)');
     }
     curl_setopt($curl, CURLOPT_URL, $url);
