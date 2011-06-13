@@ -17,7 +17,7 @@ ORDER BY received_date DESC
 LIMIT $requests");
 foreach ($apps as $app) {
     $address = str_replace("\n", ', ', $app['address']);
-    if ($planning->geocode_application($app)) {
+    if ($planning->geocode_application($app, false)) {
         $planning->update_application($app);
         echo "# Success: $app[council_id]:$app[app_ref] ($address) $app[lat],$app[lng]\n";
     } else {

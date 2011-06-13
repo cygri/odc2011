@@ -203,16 +203,18 @@ ORDER BY app_ref DESC";
 
     function clean_application($app) {
         $s = $app['details'];
+/* With luck, this is now all taken care of by the importers
         $s = $this->fix_html($s);
         $s = preg_replace('/[ \t]+/', ' ', $s);
         $s = trim($s);
         if (preg_match('/[a-z]/', $s)) {
             // Capitalize very first character
-            $s = strtoupper(substr($s, 0, 1)) . substr($s, 1);
+            $s = ucfirst($s);
         } else {
             // This is all-caps text -- looks better if lowercased
             $s = $this->remove_all_caps($s);
         }
+*/
         $app['details'] = $s;
         $app['address1'] = $this->clean_address($app['address1']);
         $app['address2'] = $this->clean_address($app['address2']);
@@ -258,16 +260,11 @@ ORDER BY app_ref DESC";
     }
 
     function remove_all_caps($s, $to_title_case = false) {
-        if (preg_match('/^[^a-z]*[A-Z][^a-z]*$/', $s)) {
-            // There are no lowercase chars, but at least one uppercase
-            if ($to_title_case) {
-                return ucwords(strtolower($s));
-            } else {
-                return substr($s, 0, 1) . strtolower(substr($s, 1));
-            }
-        } else {
+        if (!preg_match('/^[^a-z]*[A-Z][^a-z]*$/', $s)) {
             return $s;
         }
+        // There are no lowercase chars, but at least one uppercase
+        return $to_title_case ? ucwords(strtolower($s)) : ucfirst(strtolower($s));
     }
 
     function strip_county_name($address) {

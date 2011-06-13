@@ -43,3 +43,26 @@ function read_csv($filename) {
     return $apps;
 }
 
+function remove_all_caps($s, $to_title_case = false) {
+    if (!preg_match('/^[^a-z]*[A-Z][^a-z]*$/', $s)) {
+        return ucfirst($s);
+    }
+    // There are no lowercase chars, but at least one uppercase
+    if ($to_title_case) {
+        return ucwords(strtolower($s));
+    }
+    // Clever custom regex magic to remove caps but retain them where needed
+    $s = preg_replace_callback('/(?<=NO\. )([A-Z]{2,})/', '_remove_all_caps_callback', $s);
+    $s = preg_replace_callback('/(?<=^[A-Z])([A-Z]+)/', '_remove_all_caps_callback', $s);
+    $s = preg_replace_callback('/(?<![a-zA-Z][a-zA-Z]\. |^)([A-Z]{2,})/', '_remove_all_caps_callback', $s);
+    $s = str_replace(' A ', ' a ', $s);
+    return $s;
+}
+
+function _remove_all_caps_callback($match) {
+    return strtolower($match[1]);
+}
+
+function clean_string($s) {
+    return preg_replace('/ +/', ' ', $s);
+}
