@@ -23,12 +23,12 @@ function run() {
         write_csv(&$apps);
     } else {
         global $scraper_name;
-        echo "Usage:\n";
-        echo "  php $scraper_name.php --recent\n";
-        echo "    Scrapes this week's applications\n";
-        echo "  php $scraper_name.php --month YYYY MM\n";
-        echo "    Scrapes one month\n";
-        if (!empty($extra_help)) echo $extra_help;
+        fputs(STDERR, "Usage:\n");
+        fputs(STDERR, "  php $scraper_name.php --recent\n");
+        fputs(STDERR, "    Scrapes this week's applications\n");
+        fputs(STDERR, "  php $scraper_name.php --month YYYY MM\n");
+        fputs(STDERR, "    Scrapes one month\n");
+        if (!empty($extra_help)) fputs(STDERR, $extra_help);
         die();
     }
 }
@@ -40,10 +40,11 @@ function polite_delay() {
 
 function write_csv(&$apps) {
     if (!$apps) return;
-    $fields = array();
+    $merged = array();
     foreach ($apps as $app) {
-        $fields += array_keys($app);
+        $merged += $app;
     }
+    $fields = array_keys($merged);
     fputcsv(STDOUT, $fields);
     foreach ($apps as $app) {
         $row = array();
@@ -64,6 +65,7 @@ function http_request($url, $postvars=NULL) {
     if (empty($curl)) {
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_HEADER, true);
         curl_setopt($curl, CURLOPT_COOKIEFILE, '/dev/null');   // necessary to enable cookies
         curl_setopt($curl, CURLOPT_USERAGENT, 'Planning Explorer (http://planning-apps.opendata.ie)');
     }
@@ -76,8 +78,13 @@ function http_request($url, $postvars=NULL) {
         }
         curl_setopt($curl, CURLOPT_POSTFIELDS, join($fields, '&'));
     }
-    $html = curl_exec($curl);
-    return $html;
+    $response = curl_exec($curl);
+    $info = curl_getinfo($curl);
+    if ($info['http_code'] == 302) {
+        preg_match('/Location:\s+(.*)/i', substr($response, 0, $info['header_size']), $match);
+        return "Location: $match[1]";
+    }
+    return substr($response, $info['header_size']);
 }
 
 function clean_html($s) {
