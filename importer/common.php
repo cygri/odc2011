@@ -29,7 +29,11 @@ function run() {
 
 function read_csv($filename) {
     $apps = array();
-    $f = fopen($filename, 'r');
+    $f = @fopen($filename, 'r');
+    if (!$f) {
+        fputs(STDERR, "File not found: $filename\n");
+        die();
+    }
     $header = fgetcsv($f, 0, ',', '"', '"');
     while ($row = fgetcsv($f, 0, ',', '"', '"')) {
         $assoc = array();
@@ -37,6 +41,7 @@ function read_csv($filename) {
             $assoc[$header[$i]] = $value;
         }
         $app = create_app($assoc);
+        if (empty($app)) continue;
         $apps[] = $app;
     }
     fclose($f);

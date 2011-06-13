@@ -15,8 +15,8 @@ run();
  * @return Array of applications
  */
 function get_changed_applications($start_date, $end_date) {
-    $apps = get_applications($start_date, $end_date);
-    $apps += get_applications($start_date, $end_date, 'Determined');
+    $apps = get_applications($start_date, $end_date, 'Applications');
+    $apps += get_applications($start_date, $end_date, 'Decisions');
     return $apps;
 }
 
@@ -24,33 +24,33 @@ function get_changed_applications($start_date, $end_date) {
  * Executes a search and returns applications.
  * @param $start_date Inclusive, in YYYY-MM-DD format
  * @param $end_date Inclusive, in YYYY-MM-DD format
- * @param $status One of "Registered" (default), "Determined"
+ * @param $status One of "Applications" (default), "Decisions"
  * @return Array of applications
  */
-function get_applications($start_date, $end_date, $status = 'Registered') {
-    $app_urls = get_application_urls($start_date, $end_date, ($status == 'Registered') ? 'reg' : 'dec');
+function get_applications($start_date, $end_date, $type = 'Applications') {
+    $app_urls = get_application_urls($start_date, $end_date, ($type == 'Decisions') ? 'decs' : 'apps');
     $apps = array();
     foreach ($app_urls as $url) {
+        fputs(STDERR, "Fetching application " . (count($apps) + 1) . " of " . count($app_urls) . "\n");
         $apps[] = get_application_details($url);
         polite_delay();
     }
     return $apps;
 }
 
-function get_application_urls($date1, $date2, $page_number = 1) {
+function get_application_urls($date1, $date2, $type = 'apps') {
     global $site_url;
-    $context = stream_context_create(array('http'=>array('header'=>"User-Agent: Planning Explorer (http://planning-apps.opendata.ie)")));
-
+    fputs(STDERR, "Searching for applications between $date1 and $date2 with type '$type'\n");
     $date1 = get_formatted_date($date1);
     $date2 = get_formatted_date($date2);
-    $url = $site_url."&type=apps&dateoptions=specific&fromdate=$date1&todate=$date2";
-    $html = file_get_contents($url, false, $context);
-    $html = str_get_html($html);
+    $url = "$site_url&type=$type&fromdate=$date1&todate=$date2&dateoptions=specific&p=1";
+    $html = str_get_html(http_request($url));
     $next_pages = array();
-    $seen_pages = array();
+    $seen_pages = array($url);
     $urls = array();
     $done = 1;
     while (true) {
+        fputs(STDERR, "Status: " . $html->find("span[id='ctl0_PageStatus']", 0)->plaintext . "\n");
         foreach ($html->find("table[class='sdcctable'] tbody tr td a") as $link) {
             if (preg_match('/^index\.aspx\?pageid=144(.*)$/', $link->href, $match)) {
               $urls[] = $site_url.str_replace("&amp;", "&", $match[1]);
@@ -67,10 +67,9 @@ function get_application_urls($date1, $date2, $page_number = 1) {
         }
         if (!$next_pages) break;
         polite_delay();
-        $html = file_get_contents(array_shift($next_pages), false, $context);
-        $html = str_get_html($html);
+        $url = array_shift($next_pages);
+        $html = str_get_html(http_request($url));
         $done++;
-        
     }
     return $urls;
 }
@@ -80,12 +79,8 @@ function get_formatted_date($date) {
 }
 
 function get_application_details($url) {
-    $context = stream_context_create(array('http'=>array('header'=>"User-Agent: Planning Explorer (http://planning-apps.opendata.ie)")));
-    $html = file_get_contents($url, false, $context);
-    $html = str_get_html($html);
-    $app = array();
-    $app['url'] = $url;
-    $app['scrape_date'] = date('c');
+    $html = str_get_html(http_request($url));
+    $app = array('url' => $url, 'scrape_date' => date('c'));
     $key = null;
     foreach ($html->find('div[class="planningapp"] div') as $div) {
         $value = trim(preg_replace("/\s+/", " ", clean_html($div->plaintext)));

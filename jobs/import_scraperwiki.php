@@ -21,7 +21,7 @@ if ($initial_mode) {
   echo "Running in Initial Mode\n";
 }
 
-$scraper_wikis = array("2ndeplan41_1", "irish_planning_applications");
+$scraper_wikis = array("2ndeplan41_1");
 
 $rows_inserted = 0;
 $rows_skipped = 0;

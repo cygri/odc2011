@@ -4,6 +4,8 @@ require_once dirname(__FILE__) . '/simple_html_dom.php';
 
 ini_set('memory_limit', '1000M');
 
+$user_agent = 'Planning Explorer (http://planning-apps.opendata.ie)';
+
 function run() {
     global $argc, $argv;
     if ($argc == 2 && $argv[1] == '--recent') {
@@ -62,12 +64,14 @@ function write_csv(&$apps) {
 
 function http_request($url, $postvars=NULL) {
     static $curl;
+    global $user_agent;
     if (empty($curl)) {
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_HEADER, true);
         curl_setopt($curl, CURLOPT_COOKIEFILE, '/dev/null');   // necessary to enable cookies
-        curl_setopt($curl, CURLOPT_USERAGENT, 'Planning Explorer (http://planning-apps.opendata.ie)');
+        curl_setopt($curl, CURLOPT_USERAGENT, $user_agent);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 30);
     }
     curl_setopt($curl, CURLOPT_URL, $url);
     curl_setopt($curl, CURLOPT_POST, !empty($postvars));
@@ -83,6 +87,10 @@ function http_request($url, $postvars=NULL) {
     if ($info['http_code'] == 302) {
         preg_match('/Location:\s+(.*)/i', substr($response, 0, $info['header_size']), $match);
         return "Location: $match[1]";
+    } else if ($info['http_code'] != 200) {
+        var_dump($response);
+        var_dump($info);
+        throw new Exception("Status code was not 200");
     }
     return substr($response, $info['header_size']);
 }
