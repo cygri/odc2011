@@ -118,7 +118,7 @@ function get_application_details($url) {
     $dom->clear();
     if (!empty($app['File Number'])) {
         polite_delay();
-        $app_ref = str_replace('/', '', $app['File Number']);
+        $app_ref = urlencode(str_replace('/', '', $app['File Number']));
         global $site_url;
         $location_url = "$site_url/rpt_ViewSiteLocDetails.asp?page_num=0&file_number=$app_ref";
         $dom = str_get_html(http_request($location_url));
