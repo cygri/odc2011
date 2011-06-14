@@ -44,16 +44,26 @@ function get_application_urls($date1, $date2, $type = 'apps') {
     $date1 = get_formatted_date($date1);
     $date2 = get_formatted_date($date2);
     $url = "$site_url&type=$type&fromdate=$date1&todate=$date2&dateoptions=specific&p=1";
-    $html = str_get_html(http_request($url));
+    $response = http_request($url);
     $next_pages = array();
     $seen_pages = array($url);
     $urls = array();
     $done = 1;
     while (true) {
-        fputs(STDERR, "Status: " . $html->find("span[id='ctl0_PageStatus']", 0)->plaintext . "\n");
+        if (preg_match('/^Location: \/index\.aspx\?pageid=144(.*)$/', $response, $match)) {
+            // Just one application on last search result page
+            $urls[] = $site_url . $match[1]; 
+            break;
+        }
+        $html = str_get_html($response);
+        $status = $html->find("span[id='ctl0_PageStatus']", 0);
+        fputs(STDERR, "Status: " . $status->plaintext . "\n");
         foreach ($html->find("table[class='sdcctable'] tbody tr td a") as $link) {
             if (preg_match('/^index\.aspx\?pageid=144(.*)$/', $link->href, $match)) {
-              $urls[] = $site_url.str_replace("&amp;", "&", $match[1]);
+                $new_url = $site_url.str_replace("&amp;", "&", $match[1]);
+                if (!in_array($new_url, $urls)) {
+                    $urls[] = $new_url;
+                }
             }
         }
         foreach ($html->find("a[id='ctl0_NextPageLink']") as $link) {
@@ -68,7 +78,7 @@ function get_application_urls($date1, $date2, $type = 'apps') {
         if (!$next_pages) break;
         polite_delay();
         $url = array_shift($next_pages);
-        $html = str_get_html(http_request($url));
+        $response = http_request($url);
         $done++;
     }
     return $urls;

@@ -25,6 +25,7 @@ if ($geocode) {
 
 function create_app($row) {
     global $council_id;
+    if (empty($row['File Number'])) return null;
     $app = array(
         // Make application reference all upper-case: fs/12110 => FS/12110
         'app_ref' => strtoupper($row['File Number']),
@@ -40,7 +41,7 @@ function create_app($row) {
         'details' => utf8_encode(remove_all_caps(clean_string($row['Development Description']))),
         'url' => $row['url'],
     );
-    $location = GeoTools::grid_to_lat_lng($row['Grid Northings'], $row['Grid Eastings']);
+    $location = GeoTools::grid_to_lat_lng(@$row['Grid Northings'], @$row['Grid Eastings']);
     if ($location) {
         $app['lat'] = $location[0];
         $app['lng'] = $location[1];

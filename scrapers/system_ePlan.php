@@ -90,7 +90,7 @@ function get_application_urls_days($recent_days, $report_type = 'RECEIVED') {
         $dom = str_get_html($html);
         $rows = $dom->find("table[class='AppDetailsTable'] tr a, table[class='AppDetailsTable2'] tr a");
         foreach($rows as $a) {
-            $urls[] = "$site_url/$a->href";
+            $urls[] = str_replace(' ', '', "$site_url/$a->href");
         }
         $dom->clear();
         if (!preg_match("/Currently viewing page (\d+) of (\d+)/", $html, $match)) break;
@@ -116,16 +116,18 @@ function get_application_details($url) {
         $app[rtrim(clean_html($th->plaintext), ':? ')] = clean_html($td->plaintext);
     }
     $dom->clear();
-    polite_delay();
-    $app_ref = str_replace('/', '', $app['File Number']);
-    global $site_url;
-    $location_url = "$site_url/rpt_ViewSiteLocDetails.asp?page_num=0&file_number=$app_ref";
-    $dom = str_get_html(http_request($location_url));
-    foreach ($dom->find("table[class='AppDetailsTable'] th") as $th) {
-        $td = $th->next_sibling();
-        if (!$td) continue;
-        $app[rtrim(clean_html($th->plaintext), ':? ')] = clean_html($td->plaintext);
+    if (!empty($app['File Number'])) {
+        polite_delay();
+        $app_ref = str_replace('/', '', $app['File Number']);
+        global $site_url;
+        $location_url = "$site_url/rpt_ViewSiteLocDetails.asp?page_num=0&file_number=$app_ref";
+        $dom = str_get_html(http_request($location_url));
+        foreach ($dom->find("table[class='AppDetailsTable'] th") as $th) {
+            $td = $th->next_sibling();
+            if (!$td) continue;
+            $app[rtrim(clean_html($th->plaintext), ':? ')] = clean_html($td->plaintext);
+        }
+        $dom->clear();
     }
-    $dom->clear();
     return $app;
 }

@@ -6,6 +6,26 @@ ini_set('memory_limit', '1000M');
 
 $user_agent = 'Planning Explorer (http://planning-apps.opendata.ie)';
 
+set_error_handler('_error_handler');
+
+function _error_handler($errno, $errstr, $errfile, $errline) {
+    if (!(error_reporting() & $errno)) {
+        // This error code is not included in error_reporting
+        return;
+    }
+    switch ($errno) {
+        case E_NOTICE: $msg = 'NOTICE'; break;
+        case E_USER_NOTICE: $msg = 'NOTICE'; break;
+        case E_WARNING: $msg = 'WARNING'; break;
+        case E_USER_WARNING: $msg = 'WARNING'; break;
+        case E_USER_ERROR: $msg = 'ERROR'; break;
+        default: $msg = "ERROR $errno";
+    }
+    fputs (STDERR, "$msg $errstr [$errfile:$errlibe]\n");
+    if ($errno == E_USER_ERROR) exit(1);
+    return true;
+}
+
 function run() {
     global $argc, $argv;
     if ($argc == 2 && $argv[1] == '--recent') {
@@ -83,14 +103,15 @@ function http_request($url, $postvars=NULL) {
         curl_setopt($curl, CURLOPT_POSTFIELDS, join($fields, '&'));
     }
     $response = curl_exec($curl);
+    if ($response === false) {
+        var_dump(curl_error($curl));
+        var_dump(curl_errno($curl));
+        throw new Exception(curl_errno($curl) . ' ' . curl_error($curl));
+    }
     $info = curl_getinfo($curl);
     if ($info['http_code'] == 302) {
         preg_match('/Location:\s+(.*)/i', substr($response, 0, $info['header_size']), $match);
         return "Location: $match[1]";
-    } else if ($info['http_code'] != 200) {
-        var_dump($response);
-        var_dump($info);
-        throw new Exception("Status code was not 200");
     }
     return substr($response, $info['header_size']);
 }
