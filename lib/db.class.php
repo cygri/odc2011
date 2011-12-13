@@ -22,8 +22,8 @@ class DB {
     function quote($data) {
         if (empty($this->_conn)) $this->connect();
         if (is_null($data)) return "NULL";
-        if (is_numeric($data)) return (string) $data;
         if (is_string($data)) return "'" . $this->escape($data) . "'";
+        if (is_numeric($data)) return (string) $data;
         throw new DatabaseException("Cannot quote value of type " . gettype($data));
     }
 

@@ -30,6 +30,7 @@ function get_changed_applications($start_date, $end_date) {
 function get_applications($start_date, $end_date, $type = 'Applications') {
     $app_urls = get_application_urls($start_date, $end_date, ($type == 'Decisions') ? 'decs' : 'apps');
     $apps = array();
+
     foreach ($app_urls as $url) {
         fputs(STDERR, "Fetching application " . (count($apps) + 1) . " of " . count($app_urls) . "\n");
         $apps[] = get_application_details($url);

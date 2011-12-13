@@ -1,60 +1,39 @@
 <?php
 
-include dirname(__FILE__) . '/common.php';
-
-global $argc, $argv, $planning;
-if ($argc == 4 && $argv[1] == '--geocode') {
-    $geocode = true;
-    $council = $argv[2];
-    $filename = $argv[3];
-} else if ($argc == 3) {
-    $geocode = false;
-    $council = $argv[1];
-    $filename = $argv[2];
-} else {
-    fputs(STDERR, "Usage: php system_Swift.php [--geocode] CouncilID dump.csv\n");
-    die();
-}
-if ($council != 'DublinCity' && $council != 'DunLaoghaire') {
-    fputs(STDERR, "Unsupported council: $council\n");
-    die();
-}
-$council_id = $planning->get_council_id($council);
-$apps = read_csv($filename);
-$report = $planning->import_apps($apps, $geocode);
-echo date('c') . " Added $report[added] and updated $report[updated] applications from $filename\n";
-if ($geocode) {
-    echo date('c') . "   Geocoding succeeded for $report[geocode_success] and failed for $report[geocode_fail]\n";
-}
-
-function create_app($row) {
-    global $council_id;
-    $app_ref = @$row['Planning Application Reference'] ? $row['Planning Application Reference'] : $row['Planning Application Ref'];
-    if (!$app_ref) return null;
-    $status = get_decision_and_status($row['Decision']);
-    return array(
+function create_app($council, $row) {
+    // This field is called differently between Dublin City and Dun Laoghaire
+    $app_ref = @$row['Planning Application Reference']
+            ? $row['Planning Application Reference']
+            : $row['Planning Application Ref'];
+    if (!$app_ref) return null; // Should not really happen
+    list($decision, $status) = get_decision_and_status($row['Decision']);
+    $app = array(
+        'council' => $council,
         'app_ref' => $app_ref,
-        'council_id' => $council_id,
+        'imported' => $row['scrape_date'],
         // Some applications don't have an application date,
         // e.g., D0685/11. We'll use the registration date.
         'received_date' => ($row['Application Date'] ? get_unformatted_date($row['Application Date']) : get_unformatted_date($row['Registration Date'])),
-        'decision_date' => ($row['Decision Date'] ? get_unformatted_date($row['Decision Date']) : null),
-        'address1' => ucfirst(rtrim(preg_replace('/,+/', ',', clean_string($row['Main Location'])), '.')),
-        'decision' => $status[0],
-        'status' => $status[1],
+        'address' => ucfirst(rtrim(preg_replace('/,+/', ',', clean_string($row['Main Location'])), '.')),
+        'decision' => $decision,
+        'status' => $status,
         'details' => ucfirst(clean_string($row['Proposal'])),
         'url' => $row['url'],
     );
+    if (!empty($row['Decision Date'])) {
+        $app['decision_date'] = get_unformatted_date($row['Decision Date']);
+    }
+    return $app;
 }
 
 function get_decision_and_status($s) {
-    if (!$s) return array('N', 1);
-    if (preg_match('/non compliance|refuse/i', $s)) return array('R', 9);
-    if (preg_match('/grant|approved|compliance/i', $s)) return array('C', 9);
-    if (preg_match('/invalid/i', $s)) return array('N', 0);
-    if (preg_match('/additional information/i', $s)) return array('N', 2);
-    if (preg_match('/withdrawn/i', $s)) return array('N', 8);
-    return array('D', 3);
+    if (!$s) return array('N', 'NEW APPLICATION');
+    if (preg_match('/non compliance|refuse/i', $s)) return array('R', 'APPLICATION FINALISED');
+    if (preg_match('/grant|approved|compliance/i', $s)) return array('A', 'APPLICATION FINALISED');
+    if (preg_match('/invalid/i', $s)) return array('R', 'INCOMPLETED APPLICATION');
+    if (preg_match('/additional information/i', $s)) return array('N', 'FURTHER INFORMATION');
+    if (preg_match('/withdrawn/i', $s)) return array('R', 'WITHDRAWN');
+    return array('D', 'DECISION MADE');
 }
 
 function get_unformatted_date($date) {

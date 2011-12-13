@@ -2,19 +2,23 @@
 
 class Planning {
     var $db;
-    var $application_columns = array('app_ref', 'council_id', 'lat', 'lng',
-        'applicant1', 'applicant2', 'applicant3', 'received_date', 'decision_date',
-        'address1', 'address2', 'address3', 'address4',
-        'decision', 'status', 'details', 'url');
+    var $application_columns = array('council', 'app_ref', 
+        'imported', 'status', 'received_date', 'decision_date',
+        'decision', 'lat', 'lng', 'address', 'details', 'url');
     var $council_list;
 
     function __construct($db) {
         $this->db = $db;
     }
 
+    function _select_condition($app) {
+        return sprintf("council='%s' AND app_ref='%s'",
+                $this->db->escape($app['council']), $this->db->escape($app['app_ref']));
+    }
+
     function get_application($app_ref, $council_id) {
-        $row = $this->db->select_row(
-            sprintf("SELECT * FROM applications WHERE app_ref='%s' AND council_id=%d", $this->db->escape($app_ref), $council_id));
+        $sql = 'SELECT * FROM applications WHERE ' . $this->_select_condition($app);
+        $row = $this->db->select_row($sql);
         if (!$row) return null;
         return $this->clean_application($row);
     }
@@ -67,24 +71,24 @@ class Planning {
             SELECT count(*) AS count,
                    YEAR(received_date) AS year,
                    IF(lat IS NOT NULL AND lng IS NOT NULL, 1, 0) AS coordinates,
-                   council_id
+                   council
             FROM applications
             WHERE year(received_date) <= year(NOW())
-            GROUP BY year(received_date), council_id, lat IS NOT NULL AND lng IS NOT NULL
+            GROUP BY year(received_date), council, lat IS NOT NULL AND lng IS NOT NULL
 EOT;
         $yearly_data = $this->db->select_rows($query);
         $query = <<<EOT
             SELECT count(*) AS count,
                    IF(lat IS NOT NULL AND lng IS NOT NULL, 1, 0) AS coordinates,
-                   council_id
+                   council
             FROM applications
             WHERE applications.received_date > DATE_SUB(NOW(), INTERVAL 7 DAY)
-            GROUP BY council_id, lat IS NOT NULL AND lng IS NOT NULL
+            GROUP BY council, lat IS NOT NULL AND lng IS NOT NULL
 EOT;
         $recent_data = $this->db->select_rows($query);
         $result = array();
         $first_year = $this->get_first_year();
-        foreach ($this->db->select_list('SELECT id FROM councils ORDER BY name') as $council) {
+        foreach ($this->db->select_list('SELECT short_name FROM councils ORDER BY name') as $council) {
             $result[$council] = array();
             for ($year = $first_year; $year <= date('Y'); $year++) {
                 $result[$council][$year] = array(0, 0);
@@ -92,10 +96,10 @@ EOT;
             $result[$council]['recent'] = array(0, 0);
         }
         foreach ($yearly_data as $row) {
-            $result[$row['council_id']][$row['year']][$row['coordinates']] = $row['count'];
+            $result[$row['council']][$row['year']][$row['coordinates']] = $row['count'];
         }
         foreach ($recent_data as $row) {
-            $result[$row['council_id']]['recent'][$row['coordinates']] = $row['count'];
+            $result[$row['council']]['recent'][$row['coordinates']] = $row['count'];
         }
         return $result;
     }
@@ -105,7 +109,7 @@ EOT;
             $rows = $this->db->select_rows("SELECT * FROM councils ORDER BY name");
             $result = array();
             foreach ($rows as $row) {
-                $result[$row['id']] = array(
+                $result[$row['short_name']] = array(
                     'short' => $row['short_name'],
                     'name' => $row['name'],
                     'region' => $row['region'],
@@ -177,7 +181,7 @@ ORDER BY app_ref DESC";
     }
 
     function application_exists($app) {
-        $query = sprintf("SELECT COUNT(*) from applications WHERE council_id = %d AND app_ref = %s", $app['council_id'], $this->db->quote($app['app_ref']));
+        $query = 'SELECT COUNT(*) from applications WHERE ' . $this->_select_condition($app);
         return $this->db->select_value($query) > 0;
     }
 
@@ -197,7 +201,7 @@ ORDER BY app_ref DESC";
             $clauses[] = " $column = " . $this->db->quote(@$app[$column]);
         }
         $query .= join(', ', $clauses);
-        $query .= ' WHERE ' . $this->select_condition($app);
+        $query .= ' WHERE ' . $this->_select_condition($app);
         return $this->db->execute($query);
     }
 
@@ -320,19 +324,15 @@ ORDER BY app_ref DESC";
         return $tweet;
     }
 
-    function select_condition($app) {
-        return sprintf("app_ref='%s' AND council_id=%d", $this->db->escape($app['app_ref']), $app['council_id']);
-    }
-
     function geocode_application(&$app, $existing_only, $force = false) {
         if ($force) {
             // Delete any existing location from the DB and ignore any location already on the app
-            $this->db->execute("DELETE FROM geocoding WHERE " . $this->select_condition($app));
+            $this->db->execute("DELETE FROM geocoding WHERE " . $this->_select_condition($app));
             $result = null;
         } else {
             // Check if the app alrady has a location, and check the DB
             if (@$app['lat'] || @$app['lng']) return true;  // This one already has a location
-            $sql = sprintf("SELECT * FROM geocoding WHERE " . $this->select_condition($app));
+            $sql = sprintf("SELECT * FROM geocoding WHERE " . $this->_select_condition($app));
             $result = $this->db->select_row($sql);
         }
         if (!$result && !$existing_only) {

@@ -91,8 +91,8 @@ CREATE TABLE IF NOT EXISTS `councils` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
  
 CREATE TABLE `tweets` (
+  `council` varchar(12) NOT NULL,
   `app_ref` varchar(20) COLLATE utf8_bin NOT NULL,
-  `council_id` int(2) NOT NULL,
   `text` varchar(140) COLLATE utf8_bin NOT NULL,
   `tweet_id` varchar(25) COLLATE utf8_bin NOT NULL,
   `time` datetime NOT NULL,
@@ -101,8 +101,8 @@ CREATE TABLE `tweets` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `geocoding` (
+  `council` varchar(12) NOT NULL,
   `app_ref` varchar(20) NOT NULL,
-  `council_id` int(11) NOT NULL,
   `request` text NOT NULL,
   `response` varchar(20) NOT NULL,
   `lat` double DEFAULT NULL,

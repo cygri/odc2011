@@ -113,21 +113,16 @@ Note, that 'all' Ireland has the following bounding box: 51.779126,-12.045563,54
     +---------------+---------------+------+-----+---------+-------+
     | Field         | Type          | Null | Key | Default | Extra |
     +---------------+---------------+------+-----+---------+-------+
+    | council       | varchar(12)   | NO   | PRI | NULL    |       |
     | app_ref       | varchar(20)   | NO   | PRI | NULL    |       |
-    | council_id    | int(2)        | NO   | PRI | NULL    |       |
-    | lat           | double(13,10) | YES  | MUL | NULL    |       |
-    | lng           | double(13,10) | YES  | MUL | NULL    |       |
-    | applicant1    | text          | YES  |     | NULL    |       |
-    | applicant2    | text          | YES  |     | NULL    |       |
-    | applicant3    | text          | YES  |     | NULL    |       |
+    | imported      | datetime      | NO   |     | NULL    |       |
+    | status        | varchar(25)   | NO   |     | NULL    |       |
     | received_date | date          | NO   | MUL | NULL    |       |
     | decision_date | date          | YES  |     | NULL    |       |
-    | address1      | text          | YES  |     | NULL    |       |
-    | address2      | text          | YES  |     | NULL    |       |
-    | address3      | text          | YES  |     | NULL    |       |
-    | address4      | text          | YES  |     | NULL    |       |
     | decision      | char(1)       | NO   |     | NULL    |       |
-    | status        | tinyint(4)    | NO   |     | NULL    |       |
+    | lat           | double(13,10) | YES  | MUL | NULL    |       |
+    | lng           | double(13,10) | YES  | MUL | NULL    |       |
+    | address       | text          | YES  |     | NULL    |       |
     | details       | text          | YES  |     | NULL    |       |
     | url           | text          | YES  |     | NULL    |       |
     +---------------+---------------+------+-----+---------+-------+
@@ -157,11 +152,12 @@ These explain the resepective columns of the application table.
     +----+---------------------------------+
     | id | decision code                   |
     +----+---------------------------------+
-    | C  | ACCEPTED CONDITIONAL            |
     | N  | NO DECISION                     |
-    | R  | REFUSED                         |
+    | D  | DECIDED                         |
+    | A  | ACCEPTED                        |
+    | C  | ACCEPTED CONDITIONAL            |
     | U  | ACCEPTED UNCONDITIONAL          |
-    | D  | DECISION MADE BUT UNKNOWN TO US |
+    | R  | REFUSED                         |
     +----+---------------------------------+
 
 ### Table of all councils
